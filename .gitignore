@@ -1,0 +1,14 @@
+# Build output
+bin/
+obj/
+dist/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# Local certs / secrets — never commit signing material
+*.pfx
+*.snk

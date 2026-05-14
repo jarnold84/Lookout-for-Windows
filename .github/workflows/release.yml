@@ -1,0 +1,39 @@
+name: Release
+
+# Cuts a GitHub Release whenever a v* tag is pushed, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish self-contained build
+        run: pwsh ./publish.ps1 -Platform x64
+
+      # Optional: code-sign here by adding a CODE_SIGN_PFX_BASE64 + CODE_SIGN_PASSWORD
+      # secret, decoding it to a .pfx, and calling ./sign.ps1. Left out by default
+      # because it needs a real certificate.
+
+      - name: Zip portable build
+        run: Compress-Archive -Path dist/Lookout-x64/* -DestinationPath dist/Lookout-${{ github.ref_name }}-x64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Lookout ${{ github.ref_name }}
+          files: dist/Lookout-${{ github.ref_name }}-x64.zip
+          generate_release_notes: true
