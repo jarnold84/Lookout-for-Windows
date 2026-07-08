@@ -58,6 +58,20 @@
             </ListView.ItemTemplate>
         </ListView>
 
+        <!-- Empty-state hint (shown before the first message) -->
+        <StackPanel x:Name="EmptyHint" Grid.Row="1" Padding="24"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Spacing="8" MaxWidth="300">
+            <TextBlock Text="👁" FontSize="34" HorizontalAlignment="Center" />
+            <TextBlock Text="Lookout can see your screen and help."
+                       TextWrapping="Wrap" TextAlignment="Center" FontSize="14" />
+            <TextBlock Text="Ask a question below to start."
+                       TextWrapping="Wrap" TextAlignment="Center" Opacity="0.7" FontSize="13" />
+            <TextBlock Text="Tip: press Ctrl+Alt+L anytime to show or hide this window."
+                       TextWrapping="Wrap" TextAlignment="Center" Opacity="0.55" FontSize="12"
+                       Margin="0,8,0,0" />
+        </StackPanel>
+
         <!-- Status line -->
         <TextBlock x:Name="StatusLine" Grid.Row="2" Margin="12,2"
                    FontSize="12" Opacity="0.7" TextWrapping="Wrap"

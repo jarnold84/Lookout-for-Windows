@@ -10,6 +10,9 @@ namespace Lookout.Platform;
 /// </summary>
 public sealed class GlobalHotkey : IDisposable
 {
+    /// <summary>Human-readable name of the show/hide hotkey, shown in the UI.</summary>
+    public const string DisplayName = "Ctrl+Alt+L";
+
     private const int WM_HOTKEY = 0x0312;
     private const int HotkeyId = 0xB001;
 

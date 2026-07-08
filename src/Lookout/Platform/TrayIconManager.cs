@@ -27,7 +27,7 @@ public sealed class TrayIconManager : IDisposable
     {
         var menu = new MenuFlyout();
 
-        var showItem = new MenuFlyoutItem { Text = "Show Lookout" };
+        var showItem = new MenuFlyoutItem { Text = $"Show / Hide Lookout  ({GlobalHotkey.DisplayName})" };
         showItem.Click += (_, _) => _onToggle();
 
         var settingsItem = new MenuFlyoutItem { Text = "Settings" };
@@ -43,7 +43,7 @@ public sealed class TrayIconManager : IDisposable
 
         _trayIcon = new TaskbarIcon
         {
-            ToolTipText = "Lookout — AI screen assistant",
+            ToolTipText = $"Lookout — AI screen assistant  ({GlobalHotkey.DisplayName} to show/hide)",
             IconSource = new BitmapImage(new Uri("ms-appx:///Assets/lookout.ico")),
             ContextMenuMode = ContextMenuMode.SecondWindow,
             NoLeftClickDelay = true,

@@ -51,7 +51,11 @@ public static class ToolCatalog
         "- Ignore the Lookout chat window itself if it appears in a screenshot.\n" +
         "- Be proactive: if the user needs something opened or found, just do it.\n" +
         "- Each message includes a [System Context] block with running apps and " +
-        "visible window titles.";
+        "visible window titles.\n" +
+        "- The user shows or hides you with the Ctrl+Alt+L keyboard shortcut, or by "
+        + "clicking the Lookout eyeball icon in the system tray (near the clock) or on "
+        + "the desktop. If they seem unsure how to reach you or want to hide you, tell "
+        + "them this.";
 
     private static readonly object EmptyObjectSchema =
         new { type = "object", properties = new { }, required = Array.Empty<string>() };

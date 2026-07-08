@@ -17,12 +17,20 @@ public sealed partial class ChatView : UserControl
         InitializeComponent();
 
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
-        ViewModel.Messages.CollectionChanged += (_, _) => ScrollToLatest();
+        ViewModel.Messages.CollectionChanged += (_, _) =>
+        {
+            ScrollToLatest();
+            SyncEmptyHint();
+        };
 
         SyncApiKeyBar();
         SyncStatusLine();
         SyncBusyState();
+        SyncEmptyHint();
     }
+
+    private void SyncEmptyHint()
+        => EmptyHint.Visibility = ViewModel.Messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     private void OnSaveKeyClick(object sender, RoutedEventArgs e)
     {
