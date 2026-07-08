@@ -17,7 +17,8 @@
                 <ComboBox x:Name="ProviderBox" HorizontalAlignment="Stretch"
                           SelectionChanged="OnProviderChanged">
                     <ComboBoxItem Content="Anthropic (direct)" Tag="Anthropic" />
-                    <ComboBoxItem Content="OpenRouter (GLM, GPT, Gemini, …)" Tag="OpenRouter" />
+                    <ComboBoxItem Content="Google Gemini (direct)" Tag="Google" />
+                    <ComboBoxItem Content="OpenRouter (GLM, GPT, …)" Tag="OpenRouter" />
                 </ComboBox>
 
                 <TextBlock Text="Model" FontSize="12" Opacity="0.7" Margin="0,4,0,0" />

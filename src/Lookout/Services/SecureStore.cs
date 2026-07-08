@@ -13,6 +13,7 @@ public static class SecureStore
     /// <summary>Credential account names, one per provider.</summary>
     public const string AnthropicAccount = "AnthropicApiKey";
     public const string OpenRouterAccount = "OpenRouterApiKey";
+    public const string GoogleAccount = "GoogleApiKey";
 
     private const string TargetPrefix = "Lookout:";
 

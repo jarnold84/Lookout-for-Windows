@@ -32,6 +32,13 @@ public sealed class OpenAiCompatibleProvider : IChatProvider
     /// Lookout), cheap, and strong at reading UI screenshots.</summary>
     public const string DefaultModel = "google/gemini-2.5-flash-lite";
 
+    /// <summary>Google Gemini's OpenAI-compatible endpoint (Bearer auth with a
+    /// Gemini API key).</summary>
+    public const string GoogleBaseUrl = "https://generativelanguage.googleapis.com/v1beta/openai";
+
+    /// <summary>Default Google model — cheap, vision + tool calling, strong at screens.</summary>
+    public const string GoogleDefaultModel = "gemini-2.5-flash-lite";
+
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
 
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -198,9 +205,13 @@ public sealed class OpenAiCompatibleProvider : IChatProvider
                 JsonSerializer.Serialize(payload, JsonOpts), Encoding.UTF8, "application/json"),
         };
         request.Headers.Add("Authorization", "Bearer " + _apiKey);
-        // Optional OpenRouter attribution headers (harmless for other endpoints).
-        request.Headers.Add("HTTP-Referer", "https://github.com/jarnold84/Lookout-for-Windows");
-        request.Headers.Add("X-Title", "Lookout");
+        // OpenRouter-specific attribution headers — only send to OpenRouter so
+        // other endpoints (e.g. Google) never see unexpected headers.
+        if (_baseUrl.Contains("openrouter.ai", StringComparison.OrdinalIgnoreCase))
+        {
+            request.Headers.Add("HTTP-Referer", "https://github.com/jarnold84/Lookout-for-Windows");
+            request.Headers.Add("X-Title", "Lookout");
+        }
 
         return await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
     }

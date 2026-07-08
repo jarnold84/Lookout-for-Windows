@@ -2,7 +2,7 @@
 ; Compiled by build-installer.ps1, which passes the published folder via /DSourceDir.
 
 #define AppName "Lookout"
-#define AppVersion "1.1.0"
+#define AppVersion "1.2.0"
 #define AppPublisher "Joseph Arnold"
 
 #ifndef SourceDir
@@ -32,13 +32,16 @@ PrivilegesRequiredOverridesAllowed=dialog
 SetupIconFile=..\src\Lookout\Assets\lookout.ico
 
 [Tasks]
-Name: "startup"; Description: "Start Lookout automatically when I sign in"; Flags: unchecked
+; Autostart defaults ON — Lookout is a tray helper meant to always be available.
+Name: "startup"; Description: "Start Lookout automatically when I sign in"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{group}\Lookout"; Filename: "{app}\Lookout.exe"
+; Desktop shortcut is always created (target audience expects one).
+Name: "{autodesktop}\Lookout"; Filename: "{app}\Lookout.exe"
 Name: "{group}\Uninstall Lookout"; Filename: "{uninstallexe}"
 Name: "{autostartup}\Lookout"; Filename: "{app}\Lookout.exe"; Tasks: startup
 

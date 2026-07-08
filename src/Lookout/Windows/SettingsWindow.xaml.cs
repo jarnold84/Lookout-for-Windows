@@ -34,7 +34,12 @@ public sealed partial class SettingsWindow : Window
         _current = _settings.Provider;
 
         _loading = true;
-        ProviderBox.SelectedIndex = _current == ProviderKind.OpenRouter ? 1 : 0;
+        ProviderBox.SelectedIndex = _current switch
+        {
+            ProviderKind.Google => 1,
+            ProviderKind.OpenRouter => 2,
+            _ => 0,
+        };
         _loading = false;
         SyncProviderDependentUi();
 
@@ -73,19 +78,35 @@ public sealed partial class SettingsWindow : Window
 
     private void SyncProviderDependentUi()
     {
-        var isOpenRouter = _current == ProviderKind.OpenRouter;
+        switch (_current)
+        {
+            case ProviderKind.Google:
+                ModelBox.Text = _settings.GoogleModel;
+                ModelHint.Text = "e.g. gemini-2.5-flash-lite (cheap + great at screens). "
+                    + "Must support vision and tool calling.";
+                BaseUrlPanel.Visibility = Visibility.Collapsed;
+                KeyHeader.Text = "Google Gemini API key";
+                ApiKeyBox.PlaceholderText = "AIza… or AQ.…";
+                break;
 
-        ModelBox.Text = isOpenRouter ? _settings.OpenRouterModel : _settings.AnthropicModel;
-        ModelHint.Text = isOpenRouter
-            ? "e.g. google/gemini-2.5-flash-lite (cheap + great at screens). Must "
-              + "support BOTH vision and tool calling, or screenshots and actions won't work."
-            : "e.g. claude-sonnet-4-6";
+            case ProviderKind.OpenRouter:
+                ModelBox.Text = _settings.OpenRouterModel;
+                ModelHint.Text = "e.g. google/gemini-2.5-flash-lite (cheap + great at screens). "
+                    + "Must support BOTH vision and tool calling, or screenshots and actions won't work.";
+                BaseUrlPanel.Visibility = Visibility.Visible;
+                BaseUrlBox.Text = _settings.OpenRouterBaseUrl;
+                KeyHeader.Text = "OpenRouter API key";
+                ApiKeyBox.PlaceholderText = "sk-or-...";
+                break;
 
-        BaseUrlPanel.Visibility = isOpenRouter ? Visibility.Visible : Visibility.Collapsed;
-        BaseUrlBox.Text = _settings.OpenRouterBaseUrl;
-
-        KeyHeader.Text = isOpenRouter ? "OpenRouter API key" : "Anthropic API key";
-        ApiKeyBox.PlaceholderText = isOpenRouter ? "sk-or-..." : "sk-ant-...";
+            default: // Anthropic
+                ModelBox.Text = _settings.AnthropicModel;
+                ModelHint.Text = "e.g. claude-sonnet-4-6";
+                BaseUrlPanel.Visibility = Visibility.Collapsed;
+                KeyHeader.Text = "Anthropic API key";
+                ApiKeyBox.PlaceholderText = "sk-ant-...";
+                break;
+        }
 
         RefreshKeyStatus();
     }
@@ -93,15 +114,18 @@ public sealed partial class SettingsWindow : Window
     private void PersistModelFields(ProviderKind provider)
     {
         var model = ModelBox.Text?.Trim() ?? string.Empty;
-        if (provider == ProviderKind.OpenRouter)
+        switch (provider)
         {
-            _settings.OpenRouterModel = model.Length > 0 ? model : OpenAiCompatibleProvider.DefaultModel;
-            var url = BaseUrlBox.Text?.Trim();
-            _settings.OpenRouterBaseUrl = OpenAiCompatibleProvider.NormalizeBaseUrl(url);
-        }
-        else
-        {
-            _settings.AnthropicModel = model.Length > 0 ? model : ClaudeApiService.DefaultModel;
+            case ProviderKind.Google:
+                _settings.GoogleModel = model.Length > 0 ? model : OpenAiCompatibleProvider.GoogleDefaultModel;
+                break;
+            case ProviderKind.OpenRouter:
+                _settings.OpenRouterModel = model.Length > 0 ? model : OpenAiCompatibleProvider.DefaultModel;
+                _settings.OpenRouterBaseUrl = OpenAiCompatibleProvider.NormalizeBaseUrl(BaseUrlBox.Text?.Trim());
+                break;
+            default:
+                _settings.AnthropicModel = model.Length > 0 ? model : ClaudeApiService.DefaultModel;
+                break;
         }
     }
 
@@ -113,16 +137,24 @@ public sealed partial class SettingsWindow : Window
 
     // --- API key ----------------------------------------------------------
 
-    private string ActiveAccount => _current == ProviderKind.OpenRouter
-        ? SecureStore.OpenRouterAccount
-        : SecureStore.AnthropicAccount;
+    private string ActiveAccount => _current switch
+    {
+        ProviderKind.Google => SecureStore.GoogleAccount,
+        ProviderKind.OpenRouter => SecureStore.OpenRouterAccount,
+        _ => SecureStore.AnthropicAccount,
+    };
 
     private void RefreshKeyStatus()
     {
         var hasKey = SecureStore.Has(ActiveAccount);
-        var name = _current == ProviderKind.OpenRouter ? "OpenRouter" : "Anthropic";
+        var name = _current switch
+        {
+            ProviderKind.Google => "Google Gemini",
+            ProviderKind.OpenRouter => "OpenRouter",
+            _ => "Anthropic",
+        };
         KeyStatus.Text = hasKey
-            ? $"An {name} key is saved. Enter a new one below to replace it."
+            ? $"A {name} key is saved. Enter a new one below to replace it."
             : $"No {name} key saved yet. Lookout needs one to chat.";
         RemoveKeyButton.IsEnabled = hasKey;
     }

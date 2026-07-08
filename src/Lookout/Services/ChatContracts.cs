@@ -11,6 +11,9 @@ public enum ProviderKind
     /// <summary>Anthropic Messages API, spoken natively.</summary>
     Anthropic,
 
+    /// <summary>Google Gemini via its OpenAI-compatible endpoint.</summary>
+    Google,
+
     /// <summary>OpenRouter / any OpenAI-compatible chat-completions endpoint.</summary>
     OpenRouter,
 }

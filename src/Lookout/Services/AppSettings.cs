@@ -17,6 +17,8 @@ public sealed class AppSettings
 
     public string AnthropicModel { get; set; } = ClaudeApiService.DefaultModel;
 
+    public string GoogleModel { get; set; } = OpenAiCompatibleProvider.GoogleDefaultModel;
+
     public string OpenRouterModel { get; set; } = OpenAiCompatibleProvider.DefaultModel;
 
     public string OpenRouterBaseUrl { get; set; } = OpenAiCompatibleProvider.DefaultBaseUrl;
@@ -29,9 +31,12 @@ public sealed class AppSettings
 
     /// <summary>The credential account name for the active provider's key.</summary>
     [JsonIgnore]
-    public string ActiveKeyAccount => Provider == ProviderKind.OpenRouter
-        ? SecureStore.OpenRouterAccount
-        : SecureStore.AnthropicAccount;
+    public string ActiveKeyAccount => Provider switch
+    {
+        ProviderKind.OpenRouter => SecureStore.OpenRouterAccount,
+        ProviderKind.Google => SecureStore.GoogleAccount,
+        _ => SecureStore.AnthropicAccount,
+    };
 
     /// <summary>Loads settings, returning defaults if the file is missing or invalid.</summary>
     public static AppSettings Load()
