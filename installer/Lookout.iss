@@ -2,7 +2,7 @@
 ; Compiled by build-installer.ps1, which passes the published folder via /DSourceDir.
 
 #define AppName "Lookout"
-#define AppVersion "1.2.0"
+#define AppVersion "1.2.1"
 #define AppPublisher "Joseph Arnold"
 
 #ifndef SourceDir
@@ -31,19 +31,19 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 SetupIconFile=..\src\Lookout\Assets\lookout.ico
 
-[Tasks]
-; Autostart defaults ON — Lookout is a tray helper meant to always be available.
-Name: "startup"; Description: "Start Lookout automatically when I sign in"
-
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{group}\Lookout"; Filename: "{app}\Lookout.exe"
-; Desktop shortcut is always created (target audience expects one).
+; Desktop + autostart shortcuts are always created — Lookout is a tray helper
+; meant to be available at all times. (Both are unconditional rather than
+; opt-in tasks: Inno remembers previous task choices across upgrades, which
+; silently suppressed autostart. Users can still disable startup via
+; Task Manager > Startup.)
 Name: "{autodesktop}\Lookout"; Filename: "{app}\Lookout.exe"
+Name: "{autostartup}\Lookout"; Filename: "{app}\Lookout.exe"
 Name: "{group}\Uninstall Lookout"; Filename: "{uninstallexe}"
-Name: "{autostartup}\Lookout"; Filename: "{app}\Lookout.exe"; Tasks: startup
 
 [Run]
 Filename: "{app}\Lookout.exe"; Description: "Launch Lookout now"; Flags: nowait postinstall skipifsilent
