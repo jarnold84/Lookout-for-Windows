@@ -45,6 +45,22 @@ Grab the latest **[Release](../../releases/latest)** and use either:
 Then click the tray icon (or press **Ctrl+Alt+L**) and paste your
 [Anthropic API key](https://console.anthropic.com/) into the box at the top.
 
+### Choosing an AI provider & model
+
+Lookout works with **Anthropic directly** or with **OpenRouter** (one key for
+GLM, Gemini, GPT, and more). Pick one in **tray → Settings → AI provider**; each
+provider keeps its own API key and model.
+
+Whatever model you choose **must support both vision and tool calling** — Lookout
+sees your screen and takes actions, so a text-only model won't work.
+
+- **Anthropic:** `claude-sonnet-4-6` (default).
+- **OpenRouter (cheap + great at reading screens):** `google/gemini-2.5-flash-lite`
+  (default). Alternatives: `z-ai/glm-4.6v`, or `google/gemini-2.5-flash` for more
+  reasoning muscle. Get a key at [openrouter.ai](https://openrouter.ai/).
+
+Keys are stored in Windows Credential Manager, never in a file.
+
 ### ⚠️ Windows will warn you first — this is expected
 
 These downloads are **not code-signed**, so Windows treats them as "unknown."

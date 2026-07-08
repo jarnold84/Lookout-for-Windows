@@ -11,9 +11,28 @@
         <StackPanel Padding="22" Spacing="20" MaxWidth="480" HorizontalAlignment="Left">
             <TextBlock Text="Lookout Settings" FontSize="20" FontWeight="SemiBold" />
 
+            <!-- AI provider -->
+            <StackPanel Spacing="6">
+                <TextBlock Text="AI provider" FontWeight="SemiBold" />
+                <ComboBox x:Name="ProviderBox" HorizontalAlignment="Stretch"
+                          SelectionChanged="OnProviderChanged">
+                    <ComboBoxItem Content="Anthropic (direct)" Tag="Anthropic" />
+                    <ComboBoxItem Content="OpenRouter (GLM, GPT, Gemini, …)" Tag="OpenRouter" />
+                </ComboBox>
+
+                <TextBlock Text="Model" FontSize="12" Opacity="0.7" Margin="0,4,0,0" />
+                <TextBox x:Name="ModelBox" />
+                <TextBlock x:Name="ModelHint" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+
+                <StackPanel x:Name="BaseUrlPanel" Spacing="4" Visibility="Collapsed">
+                    <TextBlock Text="API base URL" FontSize="12" Opacity="0.7" Margin="0,4,0,0" />
+                    <TextBox x:Name="BaseUrlBox" />
+                </StackPanel>
+            </StackPanel>
+
             <!-- API key -->
             <StackPanel Spacing="6">
-                <TextBlock Text="Anthropic API key" FontWeight="SemiBold" />
+                <TextBlock x:Name="KeyHeader" Text="API key" FontWeight="SemiBold" />
                 <TextBlock x:Name="KeyStatus" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
                 <PasswordBox x:Name="ApiKeyBox" PlaceholderText="sk-ant-..." />
                 <StackPanel Orientation="Horizontal" Spacing="8">

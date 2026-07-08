@@ -23,14 +23,15 @@
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,0,0,1" Padding="12,10">
             <StackPanel Spacing="6">
-                <TextBlock Text="Enter your Anthropic API key to start chatting."
+                <TextBlock Text="{x:Bind ViewModel.KeyPrompt, Mode=OneWay}"
                            FontSize="12" TextWrapping="Wrap" />
                 <Grid ColumnSpacing="6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <PasswordBox x:Name="ApiKeyBox" Grid.Column="0" PlaceholderText="sk-ant-..." />
+                    <PasswordBox x:Name="ApiKeyBox" Grid.Column="0"
+                                 PlaceholderText="{x:Bind ViewModel.KeyPlaceholder, Mode=OneWay}" />
                     <Button x:Name="SaveKeyButton" Grid.Column="1" Content="Save"
                             Click="OnSaveKeyClick" />
                 </Grid>

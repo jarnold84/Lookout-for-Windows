@@ -14,21 +14,6 @@ using Lookout.Models;
 
 namespace Lookout.Services;
 
-/// <summary>Raised for any non-success outcome from the Claude API.</summary>
-public sealed class ClaudeApiException : Exception
-{
-    public ClaudeApiException(string message) : base(message) { }
-}
-
-/// <summary>An event emitted while streaming an assistant turn.</summary>
-public abstract record AssistantEvent;
-
-/// <summary>A fragment of assistant text as it streams in.</summary>
-public sealed record AssistantTextDelta(string Text) : AssistantEvent;
-
-/// <summary>A human-readable note that a tool is running (e.g. "Opening Notepad…").</summary>
-public sealed record AssistantToolActivity(string Description) : AssistantEvent;
-
 /// <summary>Kinds of server-sent events from the Anthropic streaming API.</summary>
 public enum SseEventKind
 {
@@ -59,164 +44,52 @@ public readonly record struct SseEvent
 /// token and runs an agentic loop: when Claude requests tools, they're executed
 /// via <see cref="IToolExecutor"/> and the results are fed back automatically.
 /// </summary>
-public sealed class ClaudeApiService
+public sealed class ClaudeApiService : IChatProvider
 {
     private const string Endpoint = "https://api.anthropic.com/v1/messages";
     private const string AnthropicVersion = "2023-06-01";
-    private const string Model = "claude-sonnet-4-6";
     private const int MaxTokens = 2048;
     private const int MaxAgenticIterations = 8;
+
+    /// <summary>Default model used when Anthropic is selected and none is configured.</summary>
+    public const string DefaultModel = "claude-sonnet-4-6";
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        // Standard JSON escaping (\" not ") — we send to an API over HTTPS,
+        // not into HTML, so relaxed escaping is correct and keeps payloads clean.
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    private readonly CustomContextService _customContext = new();
+    private readonly string _apiKey;
+    private readonly string _model;
 
-    public const string BaseSystemPrompt =
-        "You are Lookout, a friendly AI screen assistant for Windows. You help " +
-        "people navigate their computer — the kind of help someone might phone a " +
-        "tech-savvy friend or family member for.\n\n" +
-        "Screenshots of the user's screen are attached automatically at the start " +
-        "of a conversation and after the user has been away for a while. Use what " +
-        "you can see to give specific, grounded guidance.\n\n" +
-        "You have tools to take action on the user's computer:\n" +
-        "- capture_screen: take a fresh screenshot of all displays — use this when " +
-        "you need to see what's currently on screen, e.g. after the user says they " +
-        "did something. Don't capture unless you actually need to look.\n" +
-        "- highlight_element: draw a pulsing highlight on screen pointing at a "
-        + "specific button, link, or piece of text. Use this whenever you tell the "
-        + "user to click something — pass the element's visible text so they can "
-        + "see exactly where it is.\n" +
-        "- list_applications: see what apps are installed.\n" +
-        "- search_files: find files and folders by name.\n" +
-        "- open_item: open an app, file, folder, or URL.\n" +
-        "- save_note: remember something useful about the user for future "
-        + "conversations.\n" +
-        "- read_notes: recall what you've learned about the user in past sessions.\n\n" +
-        "At the start of a new conversation, use read_notes to recall what you know "
-        + "about this user. As you help them, use save_note to remember useful things — "
-        + "what they struggle with, apps they use, their comfort level, projects they're "
-        + "working on, preferences. Keep notes concise; don't save every interaction.\n\n" +
-        "Guidelines:\n" +
-        "- Reference what you actually see: app names, button labels, menu items, " +
-        "window titles, visible text.\n" +
-        "- Be specific about locations: \"the blue Save button in the top-right " +
-        "corner\" not just \"the button\".\n" +
-        "- Give 1-2 clear next steps at a time, not long tutorials.\n" +
-        "- Be conversational, encouraging, and patient.\n" +
-        "- Keep replies concise — this is a small floating window, not a document.\n" +
-        "- If you can't see something clearly in the screenshot, say so.\n" +
-        "- Ignore the Lookout chat window itself if it appears in a screenshot.\n" +
-        "- Be proactive: if the user needs something opened or found, just do it.\n" +
-        "- Each message includes a [System Context] block with running apps and " +
-        "visible window titles.";
-
-    private static readonly object[] ToolDefinitions =
+    public ClaudeApiService(string apiKey, string? model = null)
     {
-        new
-        {
-            name = "capture_screen",
-            description = "Take a fresh screenshot of all the user's displays so you "
-                + "can see what is currently on screen.",
-            input_schema = new { type = "object", properties = new { }, required = Array.Empty<string>() },
-        },
-        new
-        {
-            name = "highlight_element",
-            description = "Draw a pulsing highlight on screen pointing at a UI element "
-                + "(button, link, menu item, or text). Use it whenever you tell the user "
-                + "to click or look at something.",
-            input_schema = new
-            {
-                type = "object",
-                properties = new
-                {
-                    text = new { type = "string", description = "The visible text of the element to point at, e.g. \"Save\" or \"File\"." },
-                },
-                required = new[] { "text" },
-            },
-        },
-        new
-        {
-            name = "list_applications",
-            description = "List the applications installed on the user's computer "
-                + "(from the Start Menu).",
-            input_schema = new { type = "object", properties = new { }, required = Array.Empty<string>() },
-        },
-        new
-        {
-            name = "search_files",
-            description = "Search for files and folders by name on the user's computer.",
-            input_schema = new
-            {
-                type = "object",
-                properties = new
-                {
-                    query = new { type = "string", description = "Text to look for in file and folder names." },
-                    directory = new { type = "string", description = "Optional folder to search within. Defaults to the user's profile folder." },
-                },
-                required = new[] { "query" },
-            },
-        },
-        new
-        {
-            name = "open_item",
-            description = "Open an application, file, folder, or URL for the user.",
-            input_schema = new
-            {
-                type = "object",
-                properties = new
-                {
-                    path = new { type = "string", description = "App name, file path, folder path, or URL to open." },
-                },
-                required = new[] { "path" },
-            },
-        },
-        new
-        {
-            name = "save_note",
-            description = "Save a concise note about the user to remember in future "
-                + "conversations (skill level, preferences, projects, what they struggle with).",
-            input_schema = new
-            {
-                type = "object",
-                properties = new
-                {
-                    note = new { type = "string", description = "The note to remember. Keep it short and useful." },
-                },
-                required = new[] { "note" },
-            },
-        },
-        new
-        {
-            name = "read_notes",
-            description = "Recall the notes you've saved about this user in past sessions.",
-            input_schema = new { type = "object", properties = new { }, required = Array.Empty<string>() },
-        },
-    };
+        _apiKey = apiKey;
+        _model = string.IsNullOrWhiteSpace(model) ? DefaultModel : model;
+    }
 
-    /// <summary>
-    /// Streams an assistant turn for the given history. Runs the agentic loop:
-    /// any tools Claude requests are executed via <paramref name="toolExecutor"/>
-    /// and the results fed back until Claude produces a final answer. Screenshots
-    /// in <paramref name="images"/> are attached to the latest user turn.
-    /// </summary>
+    /// <summary>Anthropic tool definitions, serialized from the shared catalog.</summary>
+    private static readonly object[] ToolDefinitions = ToolCatalog.Tools
+        .Select(t => (object)new { name = t.Name, description = t.Description, input_schema = t.Schema })
+        .ToArray();
+
+    /// <inheritdoc />
     public async IAsyncEnumerable<AssistantEvent> StreamConversationAsync(
         IReadOnlyList<Message> history,
         IReadOnlyList<byte[]>? images,
         IToolExecutor toolExecutor,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var apiKey = SecureStore.LoadApiKey();
-        if (string.IsNullOrWhiteSpace(apiKey))
-            throw new ClaudeApiException("No Anthropic API key is set.");
+        if (string.IsNullOrWhiteSpace(_apiKey))
+            throw new ChatApiException("No Anthropic API key is set.");
 
         var messages = BuildMessages(history, images);
-        var systemPrompt = BuildSystemPrompt();
+        var systemPrompt = ToolCatalog.BuildSystemPrompt();
 
         for (var iteration = 0; iteration < MaxAgenticIterations; iteration++)
         {
@@ -226,12 +99,12 @@ public sealed class ClaudeApiService
             var toolAccumulators = new Dictionary<int, ToolUseAccumulator>();
             string? stopReason = null;
 
-            using (var response = await SendRequestAsync(apiKey, systemPrompt, messages, ct))
+            using (var response = await SendRequestAsync(_apiKey, _model, systemPrompt, messages, ct))
             {
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
-                    throw new ClaudeApiException(DescribeError(response.StatusCode, body));
+                    throw new ChatApiException(DescribeError(response.StatusCode, body));
                 }
 
                 using var stream = await response.Content.ReadAsStreamAsync(ct);
@@ -269,7 +142,7 @@ public sealed class ClaudeApiService
                                 stopReason = evt.StopReason;
                             break;
                         case SseEventKind.Error:
-                            throw new ClaudeApiException(evt.Error!);
+                            throw new ChatApiException(evt.Error!);
                     }
                 }
             }
@@ -310,25 +183,16 @@ public sealed class ClaudeApiService
             messages.Add(new ApiMessage { Role = "user", Content = resultBlocks });
         }
 
-        throw new ClaudeApiException(
+        throw new ChatApiException(
             "The assistant kept requesting tools without finishing. Stopped to avoid a loop.");
     }
 
-    /// <summary>Combines the base prompt with the user's custom context, if any.</summary>
-    private string BuildSystemPrompt()
-    {
-        var custom = _customContext.LoadContext();
-        return string.IsNullOrEmpty(custom)
-            ? BaseSystemPrompt
-            : BaseSystemPrompt + "\n\n[User Context]\n" + custom;
-    }
-
     private static async Task<HttpResponseMessage> SendRequestAsync(
-        string apiKey, string systemPrompt, List<ApiMessage> messages, CancellationToken ct)
+        string apiKey, string model, string systemPrompt, List<ApiMessage> messages, CancellationToken ct)
     {
         var payload = new RequestBody
         {
-            Model = Model,
+            Model = model,
             MaxTokens = MaxTokens,
             System = systemPrompt,
             Stream = true,

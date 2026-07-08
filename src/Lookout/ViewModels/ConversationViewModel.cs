@@ -11,15 +11,14 @@ using Lookout.Services;
 namespace Lookout.ViewModels;
 
 /// <summary>
-/// Orchestrates the chat: holds the message list, sends user input to Claude,
-/// and streams the reply back into the UI.
+/// Orchestrates the chat: holds the message list, sends user input to the
+/// active AI provider, and streams the reply back into the UI.
 /// </summary>
 public sealed class ConversationViewModel : ObservableObject
 {
     /// <summary>Re-capture the screen if this long has passed since the last turn.</summary>
     private static readonly TimeSpan InactivityThreshold = TimeSpan.FromMinutes(3);
 
-    private readonly ClaudeApiService _api = new();
     private readonly ScreenCaptureService _capture = new();
     private readonly SystemContextService _context = new();
     private readonly OcrService _ocr = new();
@@ -27,6 +26,7 @@ public sealed class ConversationViewModel : ObservableObject
     private readonly OverlayService _overlay;
     private readonly ActionService _actions;
 
+    private AppSettings _settings;
     private string _inputText = string.Empty;
     private bool _isBusy;
     private bool _needsApiKey;
@@ -39,13 +39,30 @@ public sealed class ConversationViewModel : ObservableObject
         // Created on the UI thread, so the overlay can capture this dispatcher.
         _overlay = new OverlayService(DispatcherQueue.GetForCurrentThread());
         _actions = new ActionService(_capture, _ocr, _overlay, _memory);
+        _settings = AppSettings.Load();
 
         SendCommand = new RelayCommand(
             _ => _ = SendAsync(),
             _ => !_isBusy && !string.IsNullOrWhiteSpace(_inputText));
         CancelCommand = new RelayCommand(_ => _cts?.Cancel(), _ => _isBusy);
 
-        _needsApiKey = !SecureStore.HasApiKey();
+        _needsApiKey = !ChatProviderFactory.HasActiveKey(_settings);
+    }
+
+    /// <summary>Prompt shown in the API-key bar (provider-specific).</summary>
+    public string KeyPrompt => ChatProviderFactory.KeyPrompt(_settings);
+
+    /// <summary>Placeholder for the API-key input (provider-specific).</summary>
+    public string KeyPlaceholder => ChatProviderFactory.KeyPlaceholder(_settings);
+
+    /// <summary>Re-reads settings (e.g. after the Settings window changed provider)
+    /// and refreshes the API-key bar to match the active provider.</summary>
+    public void ReloadSettings()
+    {
+        _settings = AppSettings.Load();
+        NeedsApiKey = !ChatProviderFactory.HasActiveKey(_settings);
+        OnPropertyChanged(nameof(KeyPrompt));
+        OnPropertyChanged(nameof(KeyPlaceholder));
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
@@ -91,7 +108,7 @@ public sealed class ConversationViewModel : ObservableObject
 
     public void SaveApiKey(string apiKey)
     {
-        SecureStore.SaveApiKey(apiKey);
+        SecureStore.Save(_settings.ActiveKeyAccount, apiKey);
         NeedsApiKey = false;
         StatusMessage = "API key saved.";
     }
@@ -105,9 +122,14 @@ public sealed class ConversationViewModel : ObservableObject
         if (text.Length == 0)
             return;
 
-        if (!SecureStore.HasApiKey())
+        // Pick up any provider/model changes made in Settings since the last turn.
+        _settings = AppSettings.Load();
+
+        if (!ChatProviderFactory.HasActiveKey(_settings))
         {
             NeedsApiKey = true;
+            OnPropertyChanged(nameof(KeyPrompt));
+            OnPropertyChanged(nameof(KeyPlaceholder));
             return;
         }
 
@@ -156,8 +178,9 @@ public sealed class ConversationViewModel : ObservableObject
         _cts = new CancellationTokenSource();
         try
         {
+            var provider = ChatProviderFactory.Create(_settings);
             var history = BuildHistory(contextBlock);
-            await foreach (var evt in _api.StreamConversationAsync(
+            await foreach (var evt in provider.StreamConversationAsync(
                 history, images, _actions, _cts.Token))
             {
                 switch (evt)
@@ -181,7 +204,7 @@ public sealed class ConversationViewModel : ObservableObject
                 ? "(canceled)"
                 : assistant.Text + "  …(canceled)";
         }
-        catch (ClaudeApiException ex)
+        catch (ChatApiException ex)
         {
             assistant.Text = "⚠ " + ex.Message;
             if (ex.Message.Contains("API key", StringComparison.OrdinalIgnoreCase))

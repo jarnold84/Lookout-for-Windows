@@ -21,6 +21,6 @@
             <TextBlock x:Name="HeaderText" Text="Lookout" FontWeight="SemiBold" />
         </Border>
 
-        <views:ChatView Grid.Row="1" />
+        <views:ChatView x:Name="ChatContent" Grid.Row="1" />
     </Grid>
 </Window>

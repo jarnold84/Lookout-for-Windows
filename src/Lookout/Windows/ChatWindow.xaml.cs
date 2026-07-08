@@ -76,6 +76,8 @@ public sealed partial class ChatWindow : Window
 
     public void ShowAndActivate()
     {
+        // Pick up any provider/key changes made in the Settings window.
+        ChatContent.ViewModel.ReloadSettings();
         _appWindow.Show();
         Activate();
         _appWindow.MoveInZOrderAtTop();

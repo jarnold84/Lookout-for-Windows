@@ -13,5 +13,7 @@ public static class LookoutPaths
 
     public static string NotesFile => Path.Combine(Root, "notes.md");
 
+    public static string SettingsFile => Path.Combine(Root, "settings.json");
+
     public static void EnsureRoot() => Directory.CreateDirectory(Root);
 }
