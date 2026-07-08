@@ -16,6 +16,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <AssemblyName>Lookout</AssemblyName>
+    <!-- Embed the eyeball icon into Lookout.exe so it shows in Explorer,
+         the taskbar, Alt+Tab, and all shortcuts. -->
+    <ApplicationIcon>Assets\lookout.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
