@@ -33,6 +33,36 @@ were thinking about Vercel/Railway — those host web apps; this isn't one.)
 
 ---
 
+## Installing
+
+Grab the latest **[Release](../../releases/latest)** and use either:
+
+- **`Lookout-Setup-x.y.z-x64.exe`** — the installer (adds a Start Menu entry,
+  optional "start at sign-in"). Recommended.
+- **`Lookout-vx.y.z-x64.zip`** — a portable build; unzip anywhere and run
+  `Lookout.exe`. No install.
+
+Then click the tray icon (or press **Ctrl+Alt+L**) and paste your
+[Anthropic API key](https://console.anthropic.com/) into the box at the top.
+
+### ⚠️ Windows will warn you first — this is expected
+
+These downloads are **not code-signed**, so Windows treats them as "unknown."
+You'll see one or both of these, and how to get past them:
+
+- **"Windows protected your PC" (SmartScreen):** click **More info** →
+  **Run anyway**.
+- **Smart App Control blocks it entirely:** on some Windows 11 PCs this can't be
+  clicked through. Either turn Smart App Control off (Settings → Privacy &
+  security → Windows Security → App & browser control → Smart App Control), or
+  use a PC that doesn't have it enabled.
+
+These warnings appear because the app isn't signed with a reputable certificate —
+not because anything is wrong with it. Removing them requires code signing or
+publishing through the Microsoft Store (see *Distribution* below).
+
+---
+
 ## Requirements
 
 - Windows 10 (1809+) or Windows 11, x64 or ARM64
