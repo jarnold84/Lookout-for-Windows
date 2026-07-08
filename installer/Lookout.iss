@@ -2,7 +2,7 @@
 ; Compiled by build-installer.ps1, which passes the published folder via /DSourceDir.
 
 #define AppName "Lookout"
-#define AppVersion "1.0.0"
+#define AppVersion "1.1.0"
 #define AppPublisher "Joseph Arnold"
 
 #ifndef SourceDir
