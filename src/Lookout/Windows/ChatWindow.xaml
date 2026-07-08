@@ -14,11 +14,23 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Padding="12,8"
+        <Border Grid.Row="0" Padding="12,6,8,6"
                 Background="{ThemeResource LayerFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,0,0,1">
-            <TextBlock x:Name="HeaderText" Text="Lookout" FontWeight="SemiBold" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="HeaderText" Text="Lookout" FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Button x:Name="SettingsButton" Grid.Column="1" Click="OnSettingsClick"
+                        Background="Transparent" BorderThickness="0" Padding="8,4"
+                        ToolTipService.ToolTip="Settings (API key, provider, more)">
+                    <FontIcon Glyph="&#xE713;" FontSize="16" />
+                </Button>
+            </Grid>
         </Border>
 
         <views:ChatView x:Name="ChatContent" Grid.Row="1" />

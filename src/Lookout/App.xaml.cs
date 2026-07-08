@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using Microsoft.UI.Xaml;
 using Lookout.Platform;
 using Lookout.Services;
@@ -35,6 +37,14 @@ public partial class App : Application
 
         _hotkey = new GlobalHotkey(_chatWindow.Hwnd, () => _chatWindow?.ToggleVisibility());
         _chatWindow.SetHotkeyStatus(_hotkey.IsRegistered);
+
+        // Show the window on a normal launch (desktop icon, Start Menu, "Launch
+        // now"). Stay hidden in the tray only when Windows auto-starts us at
+        // sign-in — the autostart shortcut passes --autostart.
+        var launchedByAutostart = Environment.GetCommandLineArgs()
+            .Any(a => string.Equals(a, "--autostart", StringComparison.OrdinalIgnoreCase));
+        if (!launchedByAutostart)
+            _chatWindow.ShowAndActivate();
     }
 
     /// <summary>Invoked when a second instance was launched and redirected here.</summary>
@@ -43,7 +53,9 @@ public partial class App : Application
         _chatWindow?.DispatcherQueue.TryEnqueue(() => _chatWindow.ShowAndActivate());
     }
 
-    private void ShowSettings()
+    /// <summary>Opens (or focuses) the Settings window. Called from the tray menu
+    /// and the in-window Settings button.</summary>
+    public void ShowSettings()
     {
         _chatWindow?.DispatcherQueue.TryEnqueue(() =>
         {

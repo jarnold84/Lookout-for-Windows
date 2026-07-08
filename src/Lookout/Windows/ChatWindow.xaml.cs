@@ -41,6 +41,9 @@ public sealed partial class ChatWindow : Window
         HeaderText.Text = registered ? "Lookout" : "Lookout — hotkey unavailable";
     }
 
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
+        => (Microsoft.UI.Xaml.Application.Current as App)?.ShowSettings();
+
     /// <summary>Allows the next Close() to actually destroy the window (used on Quit).</summary>
     public void PrepareForExit() => _allowClose = true;
 

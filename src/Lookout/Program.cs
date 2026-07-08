@@ -12,10 +12,16 @@ namespace Lookout;
 /// </summary>
 public static class Program
 {
+    // Held for the process lifetime so the installer can detect a running
+    // instance (via [Setup] AppMutex) and close it before upgrading.
+    private static Mutex? _runningMutex;
+
     [STAThread]
     private static int Main(string[] args)
     {
         WinRT.ComWrappersSupport.InitializeComWrappers();
+
+        _runningMutex = new Mutex(false, "LookoutAppRunningMutex");
 
         if (!DecideRedirection())
         {

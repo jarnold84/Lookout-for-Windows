@@ -2,7 +2,7 @@
 ; Compiled by build-installer.ps1, which passes the published folder via /DSourceDir.
 
 #define AppName "Lookout"
-#define AppVersion "1.2.3"
+#define AppVersion "1.2.4"
 #define AppPublisher "Joseph Arnold"
 
 #ifndef SourceDir
@@ -30,6 +30,10 @@ ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 SetupIconFile=..\src\Lookout\Assets\lookout.ico
+; Lets the installer detect and close a running Lookout before upgrading,
+; so an autostarted tray instance never blocks the update.
+CloseApplications=yes
+AppMutex=LookoutAppRunningMutex
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -42,7 +46,8 @@ Name: "{group}\Lookout"; Filename: "{app}\Lookout.exe"
 ; silently suppressed autostart. Users can still disable startup via
 ; Task Manager > Startup.)
 Name: "{autodesktop}\Lookout"; Filename: "{app}\Lookout.exe"
-Name: "{autostartup}\Lookout"; Filename: "{app}\Lookout.exe"
+; Autostart launches hidden into the tray (--autostart); manual launches show the window.
+Name: "{autostartup}\Lookout"; Filename: "{app}\Lookout.exe"; Parameters: "--autostart"
 Name: "{group}\Uninstall Lookout"; Filename: "{uninstallexe}"
 
 [Run]
