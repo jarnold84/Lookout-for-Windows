@@ -77,7 +77,7 @@ public sealed class OpenAiCompatibleProvider : IChatProvider
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_apiKey))
-            throw new ChatApiException("No OpenRouter API key is set.");
+            throw new ChatApiException($"No {ProviderLabel} API key is set.");
 
         var messages = BuildMessages(ToolCatalog.BuildSystemPrompt(), history, images);
 
@@ -88,7 +88,7 @@ public sealed class OpenAiCompatibleProvider : IChatProvider
             var text = new StringBuilder();
             var toolCalls = new Dictionary<int, ToolCallAccumulator>();
 
-            using (var response = await SendRequestAsync(messages, ct))
+            using (var response = await SendWithRetryAsync(messages, ct))
             {
                 if (!response.IsSuccessStatusCode)
                 {
@@ -186,6 +186,50 @@ public sealed class OpenAiCompatibleProvider : IChatProvider
 
         throw new ChatApiException(
             "The assistant kept requesting tools without finishing. Stopped to avoid a loop.");
+    }
+
+    /// <summary>
+    /// Sends the request, transparently retrying transient rate-limit (429) and
+    /// service-unavailable (503) responses with backoff. Respects a Retry-After
+    /// header when present. Smooths over free-tier bursts.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithRetryAsync(List<ChatMessage> messages, CancellationToken ct)
+    {
+        const int maxAttempts = 3;
+        HttpResponseMessage response = null!;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            response = await SendRequestAsync(messages, ct);
+            if (response.IsSuccessStatusCode)
+                return response;
+
+            var status = (int)response.StatusCode;
+            var retryable = status == 429 || status == 503;
+            if (!retryable || attempt == maxAttempts)
+                return response;
+
+            var delay = GetRetryDelay(response, attempt);
+            response.Dispose();
+            await Task.Delay(delay, ct);
+        }
+        return response;
+    }
+
+    private static TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter?.Delta is { } delta && delta > TimeSpan.Zero)
+            return Cap(delta);
+        if (retryAfter?.Date is { } date)
+        {
+            var diff = date - DateTimeOffset.UtcNow;
+            if (diff > TimeSpan.Zero)
+                return Cap(diff);
+        }
+        // Exponential backoff: ~2s, 4s, 8s.
+        return Cap(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+
+        static TimeSpan Cap(TimeSpan t) => t > TimeSpan.FromSeconds(20) ? TimeSpan.FromSeconds(20) : t;
     }
 
     private async Task<HttpResponseMessage> SendRequestAsync(List<ChatMessage> messages, CancellationToken ct)
@@ -362,20 +406,31 @@ public sealed class OpenAiCompatibleProvider : IChatProvider
         return url.TrimEnd('/');
     }
 
-    private static string DescribeError(HttpStatusCode status, string body)
+    /// <summary>Human-readable name of the endpoint, derived from the base URL.</summary>
+    private string ProviderLabel =>
+        _baseUrl.Contains("googleapis", StringComparison.OrdinalIgnoreCase) ? "Google Gemini"
+        : _baseUrl.Contains("openrouter", StringComparison.OrdinalIgnoreCase) ? "OpenRouter"
+        : "the API";
+
+    private string DescribeError(HttpStatusCode status, string body)
     {
         var snippet = body.Length > 300 ? body[..300] + "…" : body;
+        var isGoogle = _baseUrl.Contains("googleapis", StringComparison.OrdinalIgnoreCase);
         return status switch
         {
             HttpStatusCode.Unauthorized =>
-                "The OpenRouter API key was rejected. Check that it's correct and active.",
+                $"The {ProviderLabel} API key was rejected. Check that it's correct and active.",
             HttpStatusCode.PaymentRequired =>
-                "OpenRouter reports insufficient credits for this request.",
+                $"{ProviderLabel} reports insufficient credits or that billing isn't enabled.",
+            HttpStatusCode.TooManyRequests when isGoogle =>
+                "Rate limited by Google Gemini. The free tier allows only a few requests per "
+                + "minute — wait a minute and try again, or enable billing in Google AI Studio "
+                + "for much higher limits.",
             HttpStatusCode.TooManyRequests =>
-                "Rate limited by OpenRouter. Wait a moment and try again.",
+                $"Rate limited by {ProviderLabel}. Wait a moment and try again.",
             HttpStatusCode.NotFound =>
                 $"Model not found. Check the model ID in Settings. ({snippet})",
-            _ => $"OpenRouter API error ({(int)status} {status}): {snippet}",
+            _ => $"{ProviderLabel} API error ({(int)status} {status}): {snippet}",
         };
     }
 
