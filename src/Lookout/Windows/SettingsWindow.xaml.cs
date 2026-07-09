@@ -63,6 +63,8 @@ public sealed partial class SettingsWindow : Window
         return ProviderKind.Anthropic;
     }
 
+    private void OnClose(object sender, RoutedEventArgs e) => Close();
+
     private void OnProviderChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_loading)
