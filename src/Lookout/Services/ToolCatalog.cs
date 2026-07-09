@@ -35,10 +35,11 @@ public static class ToolCatalog
         "- save_note: remember something useful about the user for future "
         + "conversations.\n" +
         "- read_notes: recall what you've learned about the user in past sessions.\n\n" +
-        "At the start of a new conversation, use read_notes to recall what you know "
-        + "about this user. As you help them, use save_note to remember useful things — "
-        + "what they struggle with, apps they use, their comfort level, projects they're "
-        + "working on, preferences. Keep notes concise; don't save every interaction.\n\n" +
+        "Use read_notes only when it would actually help — e.g. the user refers to "
+        + "something from a past session. Use save_note sparingly, for genuinely useful "
+        + "facts about the user (what they struggle with, their comfort level, "
+        + "preferences). Don't call these tools routinely; each call is a separate "
+        + "request. Most messages need no tools at all — just answer.\n\n" +
         "Guidelines:\n" +
         "- Reference what you actually see: app names, button labels, menu items, " +
         "window titles, visible text.\n" +
